@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Socket.IO Chat</title>
+  <style>
+    
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background-image: url(./imagen/fondochat.jpg);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    #messages {
+      list-style-type: none;
+      margin: 0;
+      padding: 1rem;
+      flex-grow: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #messages > li {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+      border-radius: 10px;
+      padding: 0.75rem;
+      max-width: 70%;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    #messages > .sent {
+      background-color: #007bff;
+      color: white;
+      margin-left: auto;
+      text-align: right;
+      flex-direction: row-reverse;
+    }
+
+    #messages > .received {
+      background-color: #ffffff;
+      color: #333333;
+      margin-right: auto;
+      border: 1px solid #ddd;
+    }
+
+    #messages > li img {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      margin: 0 10px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    #messages > li div {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    #messages > li div span {
+      font-weight: bold;
+      font-size: 0.85rem;
+      margin-bottom: 5px;
+      color: #555;
+    }
+
+    #messages > li div p {
+      margin: 0;
+      word-wrap: break-word;
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+
+    #form {
+      display: flex;
+      padding: 0.5rem;
+      background-color: #ffffff;
+      border-top: 1px solid #ddd;
+      box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+    }
+
+    #input {
+      flex-grow: 1;
+      border: 1px solid #ddd;
+      border-radius: 20px;
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      outline: none;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    #form > button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      margin-left: 0.5rem;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    #modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+
+    #modal > div {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      text-align: center;
+    }
+
+    #modal input {
+      margin-top: 10px;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+      display: block;
+      width: 80%;
+      margin: 10px auto;
+    }
+
+    #modal button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div id="modal">
+    <div>
+      <h2>Ingresa tus datos</h2>
+      <input type="text" id="nameInput" placeholder="Tu nombre" />
+      <input type="file" id="imageInput" accept="image/*" />
+      <button id="startChat">Iniciar chat</button>
+    </div>
+  </div>
+  <ul id="messages"></ul>
+  <form id="form" action="" style="display: none">
+    <input id="input" autocomplete="off" placeholder="Escribe un mensaje" />
+    <button>Enviar</button>
+  </form>
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+  <script>
+    const socket = io();
+
+    const modal = document.getElementById("modal");
+    const nameInput = document.getElementById("nameInput");
+    const imageInput = document.getElementById("imageInput");
+    const startChat = document.getElementById("startChat");
+    const form = document.getElementById("form");
+    const input = document.getElementById("input");
+    const messages = document.getElementById("messages");
+
+    let currentUser = null;
+
+    startChat.addEventListener("click", () => {
+      const name = nameInput.value.trim();
+      const file = imageInput.files[0];
+
+      if (!name || !file) {
+        alert("Por favor, ingresa tu nombre y selecciona una imagen.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        currentUser = {
+          name,
+          image: e.target.result,
+        };
+
+        socket.emit("register", currentUser);
+        modal.style.display = "none";
+        form.style.display = "flex";
+      };
+      reader.readAsDataURL(file);
+    });
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (input.value && currentUser) {
+        socket.emit("chat message", {
+          ...currentUser,
+          message: input.value,
+        });
+        input.value = "";
+      }
+    });
+
+    socket.on("chat message", ({ name, image, message }) => {
+      const li = document.createElement("li");
+      li.classList.add(name === currentUser.name ? "sent" : "received");
+
+      const img = document.createElement("img");
+      img.src = image;
+      img.alt = `${name}'s avatar`;
+
+      const nameSpan = document.createElement("span");
+      nameSpan.textContent = name;
+
+      const messageText = document.createElement("p");
+      messageText.textContent = message;
+
+      const wrapper = document.createElement("div");
+      wrapper.appendChild(nameSpan);
+      wrapper.appendChild(messageText);
+
+      li.appendChild(img);
+      li.appendChild(wrapper);
+      messages.appendChild(li);
+    });
+  </script>
+</body>
+</html>
