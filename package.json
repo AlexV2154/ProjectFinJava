@@ -7,9 +7,12 @@
     "start": "node index.js"
   },
   "dependencies": {
+    "body-parser": "^1.20.3",
+    "chat-app": "file:",
+    "cors": "^2.8.5",
     "express": "^4.21.1",
-    "socket.io": "^4.8.1",
-    "cors": "^2.8.5"
+    "mysql2": "^3.11.5",
+    "socket.io": "^4.8.1"
   },
   "engines": {
     "node": "16.x"
