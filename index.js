@@ -9,7 +9,8 @@ const io = new Server(server);
 
 // Configuración para servir archivos estáticos
 app.use(express.static(path.join(__dirname, "public")));
-
+//Nuevo cambio
+console.log("Hola mundo");
 // Ruta principal para el chat
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public/index.html"));
